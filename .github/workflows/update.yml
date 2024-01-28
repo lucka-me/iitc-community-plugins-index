@@ -28,7 +28,7 @@ jobs:
         run: cargo run -- --repository ./Community-plugins --output-path ./dist/index.json
 
       - name: Upload artifacts
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
