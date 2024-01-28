@@ -24,6 +24,12 @@ jobs:
           path: Community-plugins
           sparse-checkout: metadata
 
+      - name: Setup Cache for Rust
+        uses: actions/cache@v4
+        with:
+          key: rust
+          path: ./target
+
       - name: Generate index
         run: cargo run -- --repository ./Community-plugins --output-path ./dist/index.json
 
