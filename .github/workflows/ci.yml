@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ 'main' ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  generate:
+    name: Generate index
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Checkout IITC-CE/Community-plugins
+        uses: actions/checkout@v4
+        with:
+          repository: IITC-CE/Community-plugins
+          path: Community-plugins
+          sparse-checkout: metadata
+
+      - name: Setup Cache for Rust
+        uses: actions/cache@v4
+        with:
+          key: rust
+          path: ./target
+
+      - name: Generate index
+        run: cargo run -- --repository ./Community-plugins --output-path ./dist/index.json
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./dist
