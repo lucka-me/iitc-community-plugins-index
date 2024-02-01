@@ -41,49 +41,51 @@ fn main() {
                 return None;
             }
         })
-        .map(|author_entry| {
+        .filter_map(|author_entry| {
             let author_path = author_entry.path();
-            return Author {
-                name: author_path
-                    .file_name()
-                    .expect("Unable to get filename")
-                    .to_os_string()
-                    .into_string()
-                    .expect("Unable to convert OsString to String"),
-                plugins: author_path
-                    .read_dir()
-                    .expect("Unable to read content of author")
-                    .filter_map(|result| {
-                        if let Some(entry) = result.ok() {
-                            if !entry.file_type().is_ok_and(|file_type| file_type.is_file()) {
-                                return None;
-                            }
-                            if !entry
-                                .path()
-                                .extension()
-                                .map_or(false, |extention| extention == "yml")
-                            {
-                                return None;
-                            }
-                            return Some(entry);
-                        } else {
+            let author_name = author_path
+                .file_name()
+                .expect("Unable to get filename")
+                .to_os_string()
+                .into_string()
+                .expect("Unable to convert OsString to String");
+            let plugins = author_path
+                .read_dir()
+                .expect("Unable to read content of author")
+                .filter_map(|result| {
+                    if let Some(entry) = result.ok() {
+                        if !entry.file_type().is_ok_and(|file_type| file_type.is_file()) {
                             return None;
                         }
-                    })
-                    .filter_map(|plugin_entry| {
-                        if let Some(stem) = plugin_entry.path().file_stem() {
-                            return Some(PluginMetadata {
-                                filename: stem
-                                    .to_os_string()
-                                    .into_string()
-                                    .expect("Unable to convert OsString to String"),
-                            });
-                        } else {
+                        if !entry
+                            .path()
+                            .extension()
+                            .map_or(false, |extention| extention == "yml")
+                        {
                             return None;
                         }
-                    })
-                    .collect::<Vec<_>>(),
-            };
+                        return Some(entry);
+                    } else {
+                        return None;
+                    }
+                })
+                .filter_map(|plugin_entry| {
+                    if let Some(stem) = plugin_entry.path().file_stem() {
+                        return Some(PluginMetadata {
+                            filename: stem
+                                .to_os_string()
+                                .into_string()
+                                .expect("Unable to convert OsString to String"),
+                        });
+                    } else {
+                        return None;
+                    }
+                })
+                .collect::<Vec<_>>();
+            if plugins.is_empty() {
+                return None;
+            }
+            return Some(Author { name: author_name, plugins });
         })
         .collect::<Vec<_>>();
 
