@@ -11,14 +11,24 @@ struct Arguments {
 }
 
 #[derive(Debug, serde::Serialize)]
-struct PluginMetadata {
+#[serde(rename_all = "camelCase")]
+struct PluginIndex {
     filename: std::string::String,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    anti_features: Option<std::vec::Vec<std::string::String>>,
 }
 
 #[derive(Debug, serde::Serialize)]
-struct Author {
+struct AuthorIndex {
     name: std::string::String,
-    plugins: std::vec::Vec<PluginMetadata>,
+    plugins: std::vec::Vec<PluginIndex>,
+}
+
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
+struct PluginMetadata {
+    #[serde(alias = "antiFeatures")]
+    anti_features: Option<std::vec::Vec<std::string::String>>,
 }
 
 fn main() {
@@ -53,6 +63,7 @@ fn main() {
                 .read_dir()
                 .expect("Unable to read content of author")
                 .filter_map(|result| {
+                    // Filter YAML files
                     if let Some(entry) = result.ok() {
                         if !entry.file_type().is_ok_and(|file_type| file_type.is_file()) {
                             return None;
@@ -69,23 +80,33 @@ fn main() {
                         return None;
                     }
                 })
-                .filter_map(|plugin_entry| {
-                    if let Some(stem) = plugin_entry.path().file_stem() {
-                        return Some(PluginMetadata {
-                            filename: stem
-                                .to_os_string()
-                                .into_string()
-                                .expect("Unable to convert OsString to String"),
-                        });
-                    } else {
-                        return None;
-                    }
+                .map(|plugin_entry| {
+                    // Parse YAML files and generate index
+                    let filename = plugin_entry
+                        .path()
+                        .file_stem()
+                        .expect("Unable to get file_stem of YAML file")
+                        .to_os_string()
+                        .into_string()
+                        .expect("Unable to convert OsString to String");
+                    let file = std::fs::File::open(&plugin_entry.path())
+                        .expect("Unable to open YAML file");
+                    let reader = std::io::BufReader::new(file);
+                    let metadata: PluginMetadata =
+                        serde_yaml::from_reader(reader).expect("Unable to parse YAML file");
+                    return PluginIndex {
+                        filename,
+                        anti_features: metadata.anti_features,
+                    };
                 })
                 .collect::<Vec<_>>();
             if plugins.is_empty() {
                 return None;
             }
-            return Some(Author { name: author_name, plugins });
+            return Some(AuthorIndex {
+                name: author_name,
+                plugins,
+            });
         })
         .collect::<Vec<_>>();
 
